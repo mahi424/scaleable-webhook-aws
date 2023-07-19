@@ -7,6 +7,15 @@ output "test_cURL" {
   value = "curl -X POST -H 'Content-Type: application/json' -d '{\"id\":\"test\", \"docs\":[{\"key\":\"value\"}]}' ${aws_api_gateway_deployment.api.invoke_url}/"
 }
 
+terraform {
+  backend "s3" {
+    bucket = "pass-tf-state-bucket"
+    key    = "product-initial-fetch-state"
+    region = "ap-south-1"
+    # You can also specify other backend configurations, such as encrypting the state file.
+  }
+}
+
 resource "aws_sqs_queue" "queue" {
   name                      = var.sqs_queue_name
   delay_seconds             = 0      // how long to delay delivery of records
@@ -22,12 +31,12 @@ resource "aws_iam_role" "api" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action    = "sts:AssumeRole"
+        Action = "sts:AssumeRole"
         Principal = {
           Service = "apigateway.amazonaws.com"
         }
         Effect = "Allow",
-        "Sid": ""
+        "Sid" : ""
       },
     ]
   })
@@ -40,8 +49,8 @@ resource "aws_iam_policy" "api" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "sqs:GetQueueUrl",
           "sqs:ChangeMessageVisibility",
           "sqs:SendMessage",
@@ -137,7 +146,7 @@ resource "aws_api_gateway_integration_response" "success" {
     "application/json" = "{\"message\": \"great success!\"}"
   }
 
-  depends_on = ["aws_api_gateway_integration.api"]
+  depends_on = [aws_api_gateway_integration.api]
 }
 
 resource "aws_api_gateway_method_response" "success" {

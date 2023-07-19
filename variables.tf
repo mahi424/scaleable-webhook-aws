@@ -37,3 +37,11 @@ variable "iam_policy_name" {
   type    = string
   default = "api-perms"
 }
+
+
+variable "state_file_path" {
+  type    = string
+  default = "webhook-state-file"
+}
+
+
