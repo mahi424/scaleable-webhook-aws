@@ -2,12 +2,17 @@ provider "aws" {
   region = var.region
 }
 
+
+output "test_cURL" {
+  value = "curl -X POST -H 'Content-Type: application/json' -d '{\"id\":\"test\", \"docs\":[{\"key\":\"value\"}]}' ${aws_api_gateway_deployment.api.invoke_url}/"
+}
+
 resource "aws_sqs_queue" "queue" {
   name                      = var.sqs_queue_name
-  delay_seconds             = 0
-  max_message_size          = 262144
-  message_retention_seconds = 86400
-  receive_wait_time_seconds = 10
+  delay_seconds             = 0      // how long to delay delivery of records
+  max_message_size          = 262144 // = 256KiB, which is the limit set by AWS
+  message_retention_seconds = 86400  // = 1 day in seconds
+  receive_wait_time_seconds = 10     // how long to wait for a record to stream in when ReceiveMessage is called
 }
 
 resource "aws_iam_role" "api" {
@@ -21,7 +26,8 @@ resource "aws_iam_role" "api" {
         Principal = {
           Service = "apigateway.amazonaws.com"
         }
-        Effect = "Allow"
+        Effect = "Allow",
+        "Sid": ""
       },
     ]
   })
@@ -57,12 +63,48 @@ resource "aws_api_gateway_rest_api" "api" {
   description = var.api_gateway_description
 }
 
+# resource "aws_api_gateway_request_validator" "api" {
+#   rest_api_id           = "${aws_api_gateway_rest_api.api.id}"
+#   name                  = "payload-validator"
+#   validate_request_body = true
+# }
+
+# resource "aws_api_gateway_model" "api" {
+#   rest_api_id  = "${aws_api_gateway_rest_api.api.id}"
+#   name         = "PayloadValidator"
+#   description  = "validate the json body content conforms to the below spec"
+#   content_type = "application/json"
+
+#   schema = <<EOF
+# {
+#   "$schema": "http://json-schema.org/draft-04/schema#",
+#   "type": "object",
+#   "required": [ "id", "docs"],
+#   "properties": {
+#     "id": { "type": "string" },
+#     "docs": {
+#       "minItems": 1,
+#       "type": "array",
+#       "items": {
+#         "type": "object"
+#       }
+#     }
+#   }
+# }
+# EOF
+# }
+
 resource "aws_api_gateway_method" "api" {
   rest_api_id      = aws_api_gateway_rest_api.api.id
   resource_id      = aws_api_gateway_rest_api.api.root_resource_id
   api_key_required = false
   http_method      = "POST"
   authorization    = "NONE"
+  #   request_validator_id = "${aws_api_gateway_request_validator.api.id}"
+
+  #   request_models = {
+  #     "application/json" = "${aws_api_gateway_model.api.name}"
+  #   }
 }
 
 resource "aws_api_gateway_integration" "api" {
@@ -88,14 +130,14 @@ resource "aws_api_gateway_integration_response" "success" {
   rest_api_id       = aws_api_gateway_rest_api.api.id
   resource_id       = aws_api_gateway_rest_api.api.root_resource_id
   http_method       = aws_api_gateway_method.api.http_method
-  status_code       = 200
-  selection_pattern = "^2[0-9][0-9]"
+  status_code       = aws_api_gateway_method_response.success.status_code
+  selection_pattern = "^2[0-9][0-9]" // regex pattern for any 200 message that comes back from SQS
 
   response_templates = {
     "application/json" = "{\"message\": \"great success!\"}"
   }
 
-  depends_on = [aws_api_gateway_integration.api]
+  depends_on = ["aws_api_gateway_integration.api"]
 }
 
 resource "aws_api_gateway_method_response" "success" {
@@ -123,6 +165,7 @@ output "created_resources" {
     "sqs_queue_arn"   = aws_sqs_queue.queue.arn,
     "iam_role_arn"    = aws_iam_role.api.arn,
     "api_gateway_arn" = aws_api_gateway_rest_api.api.arn,
+    # "request_validator_arn"   = aws_api_gateway_request_validator.api.id,
     "integration_uri" = aws_api_gateway_integration.api.uri,
   }
 }
