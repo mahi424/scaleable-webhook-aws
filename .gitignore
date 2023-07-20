@@ -2,3 +2,4 @@
 terraform.tfstate
 variables.tfvars
 terraform.tfstate.backup
+forward_to_sqs_lambda.zip
