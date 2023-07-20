@@ -19,7 +19,12 @@ variable "iam_role_name" {
   type        = string
 }
 
-variable "iam_policy_name" {
+variable "iam_api_policy_name" {
+  description = "The name of the IAM policy for the API Gateway."
+  type        = string
+}
+
+variable "lambda_iam_policy_name" {
   description = "The name of the IAM policy for the API Gateway."
   type        = string
 }

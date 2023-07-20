@@ -1,5 +1,5 @@
 locals {
-  lambda_folder_path = "./forward_to_sqs_lambda"
+  lambda_folder_path = "modules/sqs_lambda/forward_to_sqs_lambda"
 }
 
 data "archive_file" "forward_to_sqs_lambda" {
@@ -49,7 +49,7 @@ resource "aws_iam_role" "lambda" {
 }
 
 resource "aws_iam_policy" "lambda" {
-  name = var.iam_policy_name
+  name = var.lambda_iam_policy_name
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -87,7 +87,7 @@ resource "aws_iam_role" "api" {
 }
 
 resource "aws_iam_policy" "api" {
-  name = var.iam_policy_name
+  name = var.iam_api_policy_name
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -177,6 +177,10 @@ resource "aws_api_gateway_deployment" "api" {
   depends_on = [
     aws_api_gateway_integration.api,
   ]
+}
+
+output "test_cURL" {
+  value = "curl -X POST -H 'Content-Type: application/json' -d '{\"id\":\"test\", \"docs\":[{\"key\":\"value\"}]}' ${aws_api_gateway_deployment.api.invoke_url}/"
 }
 
 # output "created_resources" {
