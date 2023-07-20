@@ -24,11 +24,15 @@ resource "aws_sqs_queue" "queue" {
   receive_wait_time_seconds = 10     // how long to wait for a record to stream in when ReceiveMessage is called
 }
 
+locals {  
+  lambda_folder_path = "./forward_to_sqs_lambda"
+}
 
 data "archive_file" "forward_to_sqs_lambda" {
   type        = "zip"
-  source_file = "./forward_to_sqs_lambda.zip"
-  output_path = "forward_to_sqs_lambda.zip"
+  # source_file = "./forward_to_sqs_lambda"
+  source_dir  = local.lambda_folder_path
+  output_path = "${local.lambda_folder_path}.zip"
 }
 resource "aws_lambda_function" "forward_to_sqs" {
   function_name    = "forward_to_sqs_lambda"
@@ -36,7 +40,7 @@ resource "aws_lambda_function" "forward_to_sqs" {
   handler          = "index.handler"
   runtime          = "nodejs14.x"
   filename         = "forward_to_sqs_lambda.zip"
-  source_code_hash = filebase64sha256("forward_to_sqs_lambda.zip")
+  # source_code_hash = filebase64sha256("forward_to_sqs_lambda.zip")
 
   environment {
     variables = {
